@@ -23,18 +23,35 @@ const {connection} = require('./connection')
 // },{connection})
 
 // graceful shutdown
+// const worker = new Worker('taskQueue',async (job)=>{
+//     console.log(`processing job ${job.id}`)
+//     await new Promise((res)=> setTimeout(res,2000))
+//     console.log(`Done job ${job.id}`)
+// },{connection})
+
+// process.on('SIGINT', async ()=> {
+//     console.log(`Graceful shutdown`)
+//     await worker.close();
+//     console.log(`worker closed cleanly`)
+//     process.exit(0)
+// })
+
+// Handeling stalled job
 const worker = new Worker('taskQueue',async (job)=>{
     console.log(`processing job ${job.id}`)
     await new Promise((res)=> setTimeout(res,2000))
     console.log(`Done job ${job.id}`)
-},{connection})
-
-process.on('SIGINT', async ()=> {
-    console.log(`Graceful shutdown`)
-    await worker.close();
-    console.log(`worker closed cleanly`)
-    process.exit(0)
+},{connection,
+    stalledInterval:10000,
+    maxStalledCount:1,
 })
 
-worker.on('completed',(job)=>console.log(`job ${job.id} completed`))
-worker.on('failed',(job,err)=>console.log(`job ${job.id} failed`,err.message))
+// Job Event Handling
+worker.on('active', (job) => console.log(`Started ${job.name}`));
+worker.on('completed', (job) => console.log(`✅ ${job.name} completed`));
+worker.on('stalled', (job) => console.log(`⚠️ ${job.name} stalled`));
+worker.on('failed', (job, err) => console.log(`❌ ${job.name} failed: ${err.message}`));
+
+
+// worker.on('completed',(job)=>console.log(`job ${job.id} completed`))
+// worker.on('failed',(job,err)=>console.log(`job ${job.id} failed`,err.message))
